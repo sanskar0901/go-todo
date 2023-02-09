@@ -79,7 +79,7 @@ func main() {
 		log.Fatal("Error loading .env file %s", err)
 	}
 	r := mux.NewRouter()
-	fileserver := http.FileServer(http.Dir("./html"))
+	fileserver := http.FileServer(http.Dir("./static"))
 
 	// movies = append(movies, Movie{ID: "1", Isbn: "438227", Title: "Movie 1", Director: &Director{Firstname: "John", Lastname: "Doe"}})
 	// movies = append(movies, Movie{ID: "2", Isbn: "458227", Title: "Movie 2", Director: &Director{Firstname: "Ishan", Lastname: "Joe"}})
@@ -87,9 +87,9 @@ func main() {
 	r.Handle("/", fileserver)
 	r.HandleFunc("/movies", getMovies).Methods("GET")
 	// r.HandleFunc("/movies/{id}", getMovie).Methods("GET")
-	r.HandleFunc("/addmovies", creaetMovie).Methods("POST")
-	// r.HandleFunc("/movies/{id}", updateMovie).Methods("POST")
-	r.HandleFunc("/movies/delete/{id}", deleteMovie).Methods("POST")
+	r.HandleFunc("/movie/add", creaetMovie).Methods("POST")
+	r.HandleFunc("/movie/update", updateMovie).Methods("POST")
+	r.HandleFunc("/movie/delete", deleteMovie).Methods("POST")
 
 	PORT := os.Getenv("PORT")
 	fmt.Printf("Starting server at port %s\n", PORT)
@@ -143,11 +143,40 @@ func creaetMovie(w http.ResponseWriter, r *http.Request) {
 }
 
 func deleteMovie(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	params := mux.Vars(r)
-	id, _ := primitive.ObjectIDFromHex(params["id"])
-	filter := bson.M{"title": id}
+	if err := r.ParseForm(); err != nil {
+		log.Fatal(err)
+		return
+	}
+	id, _ := primitive.ObjectIDFromHex(r.FormValue("id"))
+	filter := bson.M{"_id": id}
+
 	result, err := collection.DeleteOne(context.TODO(), filter)
+	if err != nil {
+		helper.GetError(err, w)
+		return
+	}
+	json.NewEncoder(w).Encode(result)
+}
+
+func updateMovie(w http.ResponseWriter, r *http.Request) {
+	// w.Header().Set("Content-Type", "application/json")
+	// params := mux.Vars(r)
+	if err := r.ParseForm(); err != nil {
+		log.Fatal(err)
+		return
+	}
+	id, _ := primitive.ObjectIDFromHex(r.FormValue("id"))
+	// id, _ := primitive.ObjectIDFromHex(params["id"])
+	// fmt.Println(params["id"])
+	filter := bson.M{"_id": id}
+	// fmt.Println(filter)
+	var movie Movie
+	// _ = json.NewDecoder(r.Body).Decode(&movie)
+	movie.Isbn = r.FormValue("isbn")
+	movie.Title = r.FormValue("title")
+	movie.Director = &Director{FirstName: r.FormValue("directorfname"), LastName: r.FormValue("directorlname")}
+	update := bson.M{"$set": movie}
+	result, err := collection.UpdateOne(context.TODO(), filter, update)
 	if err != nil {
 		helper.GetError(err, w)
 		return
