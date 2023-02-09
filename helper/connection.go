@@ -6,13 +6,19 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
+	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func ConnectDB() *mongo.Collection {
-	clientOptions := options.Client().ApplyURI("mongodb+srv://go:go@cluster0.yrhuybb.mongodb.net/?retryWrites=true&w=majority")
+	if err := godotenv.Load("local.env"); err != nil {
+		log.Print("No .env file found")
+	}
+	URI := os.Getenv("URI")
+	clientOptions := options.Client().ApplyURI(URI)
 	client, err := mongo.Connect(context.TODO(), clientOptions)
 	if err != nil {
 		log.Fatal(err)

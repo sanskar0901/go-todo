@@ -7,8 +7,11 @@ import (
 	"log"
 	"net/http"
 
+	"os"
+
 	"example.com/m/helper"
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -71,6 +74,10 @@ var movies []Movie
 // }
 
 func main() {
+	err := godotenv.Load("local.env")
+	if err != nil {
+		log.Fatal("Error loading .env file %s", err)
+	}
 	r := mux.NewRouter()
 	fileserver := http.FileServer(http.Dir("./html"))
 
@@ -84,8 +91,9 @@ func main() {
 	// r.HandleFunc("/movies/{id}", updateMovie).Methods("POST")
 	r.HandleFunc("/movies/delete/{id}", deleteMovie).Methods("POST")
 
-	fmt.Printf("Starting server at port 8000\n")
-	log.Fatal(http.ListenAndServe(":8000", r))
+	PORT := os.Getenv("PORT")
+	fmt.Printf("Starting server at port %s\n", PORT)
+	log.Fatal(http.ListenAndServe(PORT, r))
 }
 
 func getMovies(w http.ResponseWriter, r *http.Request) {
